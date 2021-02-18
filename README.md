@@ -223,457 +223,457 @@ underwater.h:
 
 
 
-#include <iostream>
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/ml/ml.hpp>
-using namespace cv;
-using namespace cv::ml;
-using namespace std;
+	#include <iostream>
+	#include <opencv2/core/core.hpp>
+	#include <opencv2/highgui/highgui.hpp>
+	#include <opencv2/imgproc/imgproc.hpp>
+	#include <opencv2/imgcodecs.hpp>
+	#include <opencv2/ml/ml.hpp>
+	using namespace cv;
+	using namespace cv::ml;
+	using namespace std;
 
 
-constexpr auto trainingsampleaddress = "sample (%d).png";
-//create an Mx3 vector of RGB values
-int createWaterOnlyFeatureVector(Mat &waterTrainingFeatureVectorRGB_uchar, Mat &waterTrainingLabelVector_float) {
+	constexpr auto trainingsampleaddress = "sample (%d).png";
+	//create an Mx3 vector of RGB values
+	int createWaterOnlyFeatureVector(Mat &waterTrainingFeatureVectorRGB_uchar, Mat &waterTrainingLabelVector_float) {
 
-	std::printf("\n\n function createWaterOnlyFeatureVector\n\n");
-	// char array to store filenames
-	char waterTrainingFileName[128];
+		std::printf("\n\n function createWaterOnlyFeatureVector\n\n");
+		// char array to store filenames
+		char waterTrainingFileName[128];
 
-	// num of available pure water sample images
-	uint waterTrainingTotalSamples = 2;
+		// num of available pure water sample images
+		uint waterTrainingTotalSamples = 2;
 
-	// holding all rgb pixels
-	Mat waterTrainingRGBVector;
+		// holding all rgb pixels
+		Mat waterTrainingRGBVector;
 
-	// holding all labels
-	Mat waterTrainingLabelsVector_float;
-	
-	for (uint i = 1; i <= waterTrainingTotalSamples; i++) {
+		// holding all labels
+		Mat waterTrainingLabelsVector_float;
 
-		// show the training image number in output
-		std::printf("\nimage training #%d\n", i);
-		//creating filenames				
-		std::snprintf(waterTrainingFileName, sizeof(waterTrainingFileName), trainingsampleaddress, i);
+		for (uint i = 1; i <= waterTrainingTotalSamples; i++) {
 
-		//read image
-		Mat waterTrainingImage = imread(waterTrainingFileName, 1);
+			// show the training image number in output
+			std::printf("\nimage training #%d\n", i);
+			//creating filenames				
+			std::snprintf(waterTrainingFileName, sizeof(waterTrainingFileName), trainingsampleaddress, i);
 
-		//check for data reading to be ok
-		if (!waterTrainingImage.data) {
-			std::printf("failed to fetch file %s\n", waterTrainingFileName);
-			return -1;
-		}//end of if 
-		//imshow("water only training", waterTrainingImage);
-		//waitKey(0);
+			//read image
+			Mat waterTrainingImage = imread(waterTrainingFileName, 1);
 
-		Mat WaterOnlyPlanes[3];
-		split(waterTrainingImage, WaterOnlyPlanes);
-		std::printf("size of WaterOnlyPlanes[0]: %d  %d  %d\n", WaterOnlyPlanes[0].rows, WaterOnlyPlanes[0].cols, WaterOnlyPlanes[0].channels());
+			//check for data reading to be ok
+			if (!waterTrainingImage.data) {
+				std::printf("failed to fetch file %s\n", waterTrainingFileName);
+				return -1;
+			}//end of if 
+			//imshow("water only training", waterTrainingImage);
+			//waitKey(0);
 
-		// vector of each plane
-		Mat WaterOnlyRedVector, WaterOnlyGreenVector, WaterOnlyBlueVector;
+			Mat WaterOnlyPlanes[3];
+			split(waterTrainingImage, WaterOnlyPlanes);
+			std::printf("size of WaterOnlyPlanes[0]: %d  %d  %d\n", WaterOnlyPlanes[0].rows, WaterOnlyPlanes[0].cols, WaterOnlyPlanes[0].channels());
 
-		// reshape each plane into vector separately
-		// column vector
-		WaterOnlyRedVector = WaterOnlyPlanes[2].reshape(0, 1).t();
-		WaterOnlyGreenVector = WaterOnlyPlanes[1].reshape(0, 1).t();
-		WaterOnlyBlueVector = WaterOnlyPlanes[0].reshape(0, 1).t();
-		std::printf("WaterOnlyRedVector size: %d  %d  %d\n", WaterOnlyRedVector.rows, WaterOnlyRedVector.cols, WaterOnlyRedVector.channels());
+			// vector of each plane
+			Mat WaterOnlyRedVector, WaterOnlyGreenVector, WaterOnlyBlueVector;
 
-		// (row*com)x3 vector holding all RGB pixels of water
-		// (WaterOnlyRedVector.rows, 3);
-		Mat WaterOnlyRGBVector;
+			// reshape each plane into vector separately
+			// column vector
+			WaterOnlyRedVector = WaterOnlyPlanes[2].reshape(0, 1).t();
+			WaterOnlyGreenVector = WaterOnlyPlanes[1].reshape(0, 1).t();
+			WaterOnlyBlueVector = WaterOnlyPlanes[0].reshape(0, 1).t();
+			std::printf("WaterOnlyRedVector size: %d  %d  %d\n", WaterOnlyRedVector.rows, WaterOnlyRedVector.cols, WaterOnlyRedVector.channels());
 
-		// concatenation of three vectors values using hconcat
-		// hconcate: horizontal concatenation
-		hconcat(WaterOnlyRedVector, WaterOnlyGreenVector, WaterOnlyRGBVector);
-		hconcat(WaterOnlyRGBVector, WaterOnlyBlueVector, WaterOnlyRGBVector);
-		std::printf("WaterOnlyRGBVector dims is: %d  %d  %d\n", WaterOnlyRGBVector.rows, WaterOnlyRGBVector.cols, WaterOnlyRGBVector.channels());
+			// (row*com)x3 vector holding all RGB pixels of water
+			// (WaterOnlyRedVector.rows, 3);
+			Mat WaterOnlyRGBVector;
 
-		// label vector for water pixels, all preset one 
-		Mat WaterOnlyLabelVector_float = Mat::ones(WaterOnlyRGBVector.rows, 1, CV_32SC1);
-		std::printf("WaterOnlyLabelVector_float dims: %d\t%d\t%d\t\n", WaterOnlyLabelVector_float.rows, WaterOnlyLabelVector_float.cols, WaterOnlyLabelVector_float.channels());
-		//assign value to 
-		if (!waterTrainingRGBVector.data) {
-			//if this the first time assigning
-			// no need to vconcat
-			waterTrainingRGBVector = WaterOnlyRGBVector;
-			std::printf("dims of waterTrainingRGBVector: %d\t%d\t%d\t\n", waterTrainingRGBVector.rows, waterTrainingRGBVector.cols, waterTrainingRGBVector.channels());
-		}//end of if
-		else {
-			cv::vconcat(waterTrainingRGBVector, WaterOnlyRGBVector, waterTrainingRGBVector);
-			std::printf("dims of waterTrainingRGBVector: %d\t%d\t%d\t\n", waterTrainingRGBVector.rows, waterTrainingRGBVector.cols, waterTrainingRGBVector.channels());
-		}//end of else
+			// concatenation of three vectors values using hconcat
+			// hconcate: horizontal concatenation
+			hconcat(WaterOnlyRedVector, WaterOnlyGreenVector, WaterOnlyRGBVector);
+			hconcat(WaterOnlyRGBVector, WaterOnlyBlueVector, WaterOnlyRGBVector);
+			std::printf("WaterOnlyRGBVector dims is: %d  %d  %d\n", WaterOnlyRGBVector.rows, WaterOnlyRGBVector.cols, WaterOnlyRGBVector.channels());
 
-		//////////////////////////////
-		//labeling
-		// for label +1, blue water label
-		if (i <= 6) {
-			if (!waterTrainingLabelsVector_float.data) {
-				waterTrainingLabelsVector_float = WaterOnlyLabelVector_float;
-				std::printf("waterTrainingLabelsVector_float dims: %d\t%d\t%d\t\n\n", waterTrainingLabelsVector_float.rows, waterTrainingLabelsVector_float.cols, waterTrainingLabelsVector_float.channels());
-			}
+			// label vector for water pixels, all preset one 
+			Mat WaterOnlyLabelVector_float = Mat::ones(WaterOnlyRGBVector.rows, 1, CV_32SC1);
+			std::printf("WaterOnlyLabelVector_float dims: %d\t%d\t%d\t\n", WaterOnlyLabelVector_float.rows, WaterOnlyLabelVector_float.cols, WaterOnlyLabelVector_float.channels());
+			//assign value to 
+			if (!waterTrainingRGBVector.data) {
+				//if this the first time assigning
+				// no need to vconcat
+				waterTrainingRGBVector = WaterOnlyRGBVector;
+				std::printf("dims of waterTrainingRGBVector: %d\t%d\t%d\t\n", waterTrainingRGBVector.rows, waterTrainingRGBVector.cols, waterTrainingRGBVector.channels());
+			}//end of if
 			else {
+				cv::vconcat(waterTrainingRGBVector, WaterOnlyRGBVector, waterTrainingRGBVector);
+				std::printf("dims of waterTrainingRGBVector: %d\t%d\t%d\t\n", waterTrainingRGBVector.rows, waterTrainingRGBVector.cols, waterTrainingRGBVector.channels());
+			}//end of else
+
+			//////////////////////////////
+			//labeling
+			// for label +1, blue water label
+			if (i <= 6) {
+				if (!waterTrainingLabelsVector_float.data) {
+					waterTrainingLabelsVector_float = WaterOnlyLabelVector_float;
+					std::printf("waterTrainingLabelsVector_float dims: %d\t%d\t%d\t\n\n", waterTrainingLabelsVector_float.rows, waterTrainingLabelsVector_float.cols, waterTrainingLabelsVector_float.channels());
+				}
+				else {
+					cv::vconcat(waterTrainingLabelsVector_float, WaterOnlyLabelVector_float, waterTrainingLabelsVector_float);
+					std::printf("waterTrainingLabelsVector_float dims: %d\t%d\t%d\t\n\n", waterTrainingLabelsVector_float.rows, waterTrainingLabelsVector_float.cols, waterTrainingLabelsVector_float.channels());
+				} // end of else
+			} // end if i<=6
+			// label +2.0 for green water
+			else if(i > 6 && i <= 11) {
+				WaterOnlyLabelVector_float += 1.0;
 				cv::vconcat(waterTrainingLabelsVector_float, WaterOnlyLabelVector_float, waterTrainingLabelsVector_float);
 				std::printf("waterTrainingLabelsVector_float dims: %d\t%d\t%d\t\n\n", waterTrainingLabelsVector_float.rows, waterTrainingLabelsVector_float.cols, waterTrainingLabelsVector_float.channels());
-			} // end of else
-		} // end if i<=6
-		// label +2.0 for green water
-		else if(i > 6 && i <= 11) {
-			WaterOnlyLabelVector_float += 1.0;
-			cv::vconcat(waterTrainingLabelsVector_float, WaterOnlyLabelVector_float, waterTrainingLabelsVector_float);
-			std::printf("waterTrainingLabelsVector_float dims: %d\t%d\t%d\t\n\n", waterTrainingLabelsVector_float.rows, waterTrainingLabelsVector_float.cols, waterTrainingLabelsVector_float.channels());
+			}
+			if (i == 12) {
+				WaterOnlyLabelVector_float += 2.0;
+				cv::vconcat(waterTrainingLabelsVector_float, WaterOnlyLabelVector_float, waterTrainingLabelsVector_float);
+				std::printf("waterTrainingLabelsVector_float dims: %d\t%d\t%d\t\n\n", waterTrainingLabelsVector_float.rows, waterTrainingLabelsVector_float.cols, waterTrainingLabelsVector_float.channels());
+			}//end if i==12
+			if (i == 13) {
+				WaterOnlyLabelVector_float += 3.0;
+				cv::vconcat(waterTrainingLabelsVector_float, WaterOnlyLabelVector_float, waterTrainingLabelsVector_float);
+				std::printf("waterTrainingLabelsVector_float dims: %d\t%d\t%d\t\n\n", waterTrainingLabelsVector_float.rows, waterTrainingLabelsVector_float.cols, waterTrainingLabelsVector_float.channels());
+			}//end if i==13
+			if (i == 14 || i == 15) {			
+				WaterOnlyLabelVector_float += 4.0;
+				cv::vconcat(waterTrainingLabelsVector_float, WaterOnlyLabelVector_float, waterTrainingLabelsVector_float);
+				std::printf("waterTrainingLabelsVector_float dims: %d\t%d\t%d\t\n\n", waterTrainingLabelsVector_float.rows, waterTrainingLabelsVector_float.cols, waterTrainingLabelsVector_float.channels());
+			}//end if i==14 || i==15
+
+
+		}//end of for reading water training samples
+
+		// assign the output
+		waterTrainingFeatureVectorRGB_uchar = waterTrainingRGBVector;
+		waterTrainingLabelVector_float = waterTrainingLabelsVector_float;
+
+	}// end of function createWaterOnlyFeatureVector
+
+
+	int CreateNonWaterFeatureVector(Mat &NonWaterFetureVectorRGB_uchar, Mat &NonWaterLabelVector_float) {
+
+		//read an image
+		Mat image = imread("9554.png", 1);
+		//check for existance of data
+		if (!image.data)
+		{
+			std::printf("no image data.\n"); return -1;
 		}
-		if (i == 12) {
-			WaterOnlyLabelVector_float += 2.0;
-			cv::vconcat(waterTrainingLabelsVector_float, WaterOnlyLabelVector_float, waterTrainingLabelsVector_float);
-			std::printf("waterTrainingLabelsVector_float dims: %d\t%d\t%d\t\n\n", waterTrainingLabelsVector_float.rows, waterTrainingLabelsVector_float.cols, waterTrainingLabelsVector_float.channels());
-		}//end if i==12
-		if (i == 13) {
-			WaterOnlyLabelVector_float += 3.0;
-			cv::vconcat(waterTrainingLabelsVector_float, WaterOnlyLabelVector_float, waterTrainingLabelsVector_float);
-			std::printf("waterTrainingLabelsVector_float dims: %d\t%d\t%d\t\n\n", waterTrainingLabelsVector_float.rows, waterTrainingLabelsVector_float.cols, waterTrainingLabelsVector_float.channels());
-		}//end if i==13
-		if (i == 14 || i == 15) {			
-			WaterOnlyLabelVector_float += 4.0;
-			cv::vconcat(waterTrainingLabelsVector_float, WaterOnlyLabelVector_float, waterTrainingLabelsVector_float);
-			std::printf("waterTrainingLabelsVector_float dims: %d\t%d\t%d\t\n\n", waterTrainingLabelsVector_float.rows, waterTrainingLabelsVector_float.cols, waterTrainingLabelsVector_float.channels());
-		}//end if i==14 || i==15
+
+		// defining non water coordination
+		Rect nonWaterRect(1, 400, 640, 320);
+		//non water image
+		Mat NonWaterImage = image(nonWaterRect);
+		//imshow("non water image", NonWaterImage);
+
+		//holding plited nonwater image planes
+		Mat NonWaterPlanes[3];
+
+		//split nonwater image sample
+		split(NonWaterImage, NonWaterPlanes);
+		std::printf("NonWaterPlanes[0] dims: %d\t%d\t%d \n", NonWaterPlanes[0].rows, NonWaterPlanes[0].cols, NonWaterPlanes[0].channels());
+
+		// 3 column vector for each of rgb planes
+		Mat NonWaterRedVector, NonWaterGreenVector, NonWaterBlueVector;
+
+		// reshaping each plane to get a column vector Mx1
+		NonWaterRedVector = NonWaterPlanes[2].reshape(0, 1).t();//red 1st
+		NonWaterGreenVector = NonWaterPlanes[1].reshape(0, 1).t();//green 2nd
+		NonWaterBlueVector = NonWaterPlanes[0].reshape(0, 1).t();//blue
+		std::printf("NonWaterGreenVector size is: %d\t%d\t%d\t\n", NonWaterGreenVector.rows, NonWaterGreenVector.cols, NonWaterGreenVector.channels());
+
+		// Mx3 vector holding all RGB pixels of NonWater
+		Mat NonWaterRGBVector;
+
+		// concatenate 3 column vec into one place (Mx3)
+		cv::hconcat(NonWaterRedVector, NonWaterGreenVector, NonWaterRGBVector);
+		cv::hconcat(NonWaterRGBVector, NonWaterBlueVector, NonWaterRGBVector);
+		std::printf("NonWaterRGBVector dims: %d\t%d\t%d\t\n", NonWaterRGBVector.rows, NonWaterRGBVector.cols, NonWaterRGBVector.channels());
+
+		// label vector for NonWater pixels
+		NonWaterLabelVector_float = cv::Mat::zeros(NonWaterRGBVector.rows, 1, CV_32SC1);
+		std::printf("NonWaterLabelVector_float dims: %d\t%d\t%d\t\n", NonWaterLabelVector_float.rows, NonWaterLabelVector_float.cols, NonWaterLabelVector_float.channels());
+		//cout << NonWaterLabelVector_float << "\n";
+		//cout << NonWaterLabelVector_float << "\n";
+
+		// assign output
+		NonWaterFetureVectorRGB_uchar = NonWaterRGBVector;
+	}// end of function createWaterOnlyFeatureVector
 
 
-	}//end of for reading water training samples
+	////////////////////////////////////////
+	int RedChannelCompensationEq8(Mat& image, float AlphaCoefficient, Mat &RedCompensatedImage) {
+		//planes is a vector for holding rgb channels separately
+		//std::vector<Mat> planes;
+		Mat planes[3];
 
-	// assign the output
-	waterTrainingFeatureVectorRGB_uchar = waterTrainingRGBVector;
-	waterTrainingLabelVector_float = waterTrainingLabelsVector_float;
-	
-}// end of function createWaterOnlyFeatureVector
+		//split the image into channels
+		//planes[2] is the red channel
+		split(image, planes);
+		//cout<<cv::min(planes[0],2.0f)
+		// converting planes from uchar to double
+		planes[0].convertTo(planes[0], CV_64FC1);
+		planes[1].convertTo(planes[1], CV_64FC1);
+		planes[2].convertTo(planes[2], CV_64FC1);
 
+		// defining coefficients of green and blue channel for blending
+		double a = AlphaCoefficient, b = 1.0 - a;
 
-int CreateNonWaterFeatureVector(Mat &NonWaterFetureVectorRGB_uchar, Mat &NonWaterLabelVector_float) {
+		//sum_im stores pixelwise sum of Red, Green and Blue planes
+		Mat imBlendNormal_B_G, sum_im;
 
-	//read an image
-	Mat image = imread("9554.png", 1);
-	//check for existance of data
-	if (!image.data)
-	{
-		std::printf("no image data.\n"); return -1;
+		//converting to double
+		imBlendNormal_B_G.convertTo(imBlendNormal_B_G, CV_64FC1);
+		sum_im.convertTo(sum_im, CV_64FC1);
+
+		//blending green and blue planes with a and b coefficients
+		// and 0.0 offset(or gamma)
+		addWeighted(planes[1], a, planes[0], b, 0.0, imBlendNormal_B_G);
+
+		// sum of red, green and blue pixel in two addWeighted calls
+		addWeighted(planes[2], 1.0, planes[1], 1.0, 0.0, sum_im);
+		addWeighted(planes[0], 1.0, sum_im, 1.0, 0.0, sum_im);
+
+		//dividing blended green and blue image to total RGB sum
+		divide(imBlendNormal_B_G, sum_im, imBlendNormal_B_G);
+
+		//defining average kernel 3x3
+		Mat avg3x3_kernel = (Mat_<double>(3, 3) << 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0);
+
+		//defining matrices for storing 3x3 average of blue and green planes
+		Mat blueAverage, greenAverage;
+		// converting to double type
+		blueAverage.convertTo(blueAverage, CV_64FC1);
+		greenAverage.convertTo(greenAverage, CV_64FC1);
+
+		// taking 3x3 average
+		filter2D(planes[0], blueAverage, planes[0].depth(), avg3x3_kernel);
+		filter2D(planes[1], greenAverage, planes[1].depth(), avg3x3_kernel);
+
+		//imBlendAverage_B_G_R: for blending of averaged green and blue channels
+		Mat imBlendAverage_B_G_R;
+		//convert to double
+		imBlendAverage_B_G_R.convertTo(imBlendAverage_B_G_R, CV_64FC1);
+
+		//blend averaged green and blue with a and b coeffs
+		addWeighted(greenAverage, a, blueAverage, b, 0.0, imBlendAverage_B_G_R);
+
+		//differentiate red values
+		addWeighted(imBlendAverage_B_G_R, 1.0, planes[2], -1.0, 0.0, imBlendAverage_B_G_R);
+
+		//CompensationTermRed: storing finally compensated red channel intensities
+		Mat CompensationTermRed;
+		//coverting to double
+		CompensationTermRed.convertTo(CompensationTermRed, CV_64FC1);
+
+		//multiplication term
+		CompensationTermRed = imBlendAverage_B_G_R.mul(imBlendNormal_B_G);
+
+		//final add term
+		addWeighted(CompensationTermRed, 1.0, planes[2], 1.0, 0.0, CompensationTermRed);
+
+		// assign new red channel values to planes[2]
+		planes[2] = CompensationTermRed;
+
+		Mat image2;
+		cv::merge(planes, 3, image2);
+		image2.convertTo(image2, CV_8UC3);
+		/*imshow("merge", image2);
+		std::printf("\ndims of image2 (merge): %d  %d\n", image2.rows, image2.cols);*/
+
+		// assign output
+		RedCompensatedImage = image2;
+
+		return 0;
+
+	}//end of function RedChannelCompensationEq8
+
+	void imshowwindownormal(const char name4window[128], Mat& tmp4image) {
+		namedWindow(name4window, cv::WINDOW_NORMAL); 
+		imshow(name4window, tmp4image);
 	}
 
-	// defining non water coordination
-	Rect nonWaterRect(1, 400, 640, 320);
-	//non water image
-	Mat NonWaterImage = image(nonWaterRect);
-	//imshow("non water image", NonWaterImage);
-
-	//holding plited nonwater image planes
-	Mat NonWaterPlanes[3];
-
-	//split nonwater image sample
-	split(NonWaterImage, NonWaterPlanes);
-	std::printf("NonWaterPlanes[0] dims: %d\t%d\t%d \n", NonWaterPlanes[0].rows, NonWaterPlanes[0].cols, NonWaterPlanes[0].channels());
-
-	// 3 column vector for each of rgb planes
-	Mat NonWaterRedVector, NonWaterGreenVector, NonWaterBlueVector;
-
-	// reshaping each plane to get a column vector Mx1
-	NonWaterRedVector = NonWaterPlanes[2].reshape(0, 1).t();//red 1st
-	NonWaterGreenVector = NonWaterPlanes[1].reshape(0, 1).t();//green 2nd
-	NonWaterBlueVector = NonWaterPlanes[0].reshape(0, 1).t();//blue
-	std::printf("NonWaterGreenVector size is: %d\t%d\t%d\t\n", NonWaterGreenVector.rows, NonWaterGreenVector.cols, NonWaterGreenVector.channels());
-
-	// Mx3 vector holding all RGB pixels of NonWater
-	Mat NonWaterRGBVector;
-
-	// concatenate 3 column vec into one place (Mx3)
-	cv::hconcat(NonWaterRedVector, NonWaterGreenVector, NonWaterRGBVector);
-	cv::hconcat(NonWaterRGBVector, NonWaterBlueVector, NonWaterRGBVector);
-	std::printf("NonWaterRGBVector dims: %d\t%d\t%d\t\n", NonWaterRGBVector.rows, NonWaterRGBVector.cols, NonWaterRGBVector.channels());
-
-	// label vector for NonWater pixels
-	NonWaterLabelVector_float = cv::Mat::zeros(NonWaterRGBVector.rows, 1, CV_32SC1);
-	std::printf("NonWaterLabelVector_float dims: %d\t%d\t%d\t\n", NonWaterLabelVector_float.rows, NonWaterLabelVector_float.cols, NonWaterLabelVector_float.channels());
-	//cout << NonWaterLabelVector_float << "\n";
-	//cout << NonWaterLabelVector_float << "\n";
-
-	// assign output
-	NonWaterFetureVectorRGB_uchar = NonWaterRGBVector;
-}// end of function createWaterOnlyFeatureVector
 
 
-////////////////////////////////////////
-int RedChannelCompensationEq8(Mat& image, float AlphaCoefficient, Mat &RedCompensatedImage) {
-	//planes is a vector for holding rgb channels separately
-	//std::vector<Mat> planes;
-	Mat planes[3];
+	int createWaterOnlyHSVFeatureVector(Mat& waterTrainingFeatureVectorRGB_uchar, Mat& waterTrainingLabelVector_float) {
 
-	//split the image into channels
-	//planes[2] is the red channel
-	split(image, planes);
-	//cout<<cv::min(planes[0],2.0f)
-	// converting planes from uchar to double
-	planes[0].convertTo(planes[0], CV_64FC1);
-	planes[1].convertTo(planes[1], CV_64FC1);
-	planes[2].convertTo(planes[2], CV_64FC1);
+		std::printf("\n\n function createWaterOnlyFeatureVector\n\n");
+		// char array to store filenames
+		char waterTrainingFileName[128];
 
-	// defining coefficients of green and blue channel for blending
-	double a = AlphaCoefficient, b = 1.0 - a;
+		// num of available pure water sample images
+		uint waterTrainingTotalSamples = 2;
 
-	//sum_im stores pixelwise sum of Red, Green and Blue planes
-	Mat imBlendNormal_B_G, sum_im;
+		// holding all rgb pixels
+		Mat waterTrainingRGBVector;
 
-	//converting to double
-	imBlendNormal_B_G.convertTo(imBlendNormal_B_G, CV_64FC1);
-	sum_im.convertTo(sum_im, CV_64FC1);
+		// holding all labels
+		Mat waterTrainingLabelsVector_float;
 
-	//blending green and blue planes with a and b coefficients
-	// and 0.0 offset(or gamma)
-	addWeighted(planes[1], a, planes[0], b, 0.0, imBlendNormal_B_G);
+		for (uint i = 1; i <= waterTrainingTotalSamples; i++) {
 
-	// sum of red, green and blue pixel in two addWeighted calls
-	addWeighted(planes[2], 1.0, planes[1], 1.0, 0.0, sum_im);
-	addWeighted(planes[0], 1.0, sum_im, 1.0, 0.0, sum_im);
+			// show the training image number in output
+			std::printf("\nimage training #%d\n", i);
+			//creating filenames				
+			std::snprintf(waterTrainingFileName, sizeof(waterTrainingFileName), trainingsampleaddress, i);
 
-	//dividing blended green and blue image to total RGB sum
-	divide(imBlendNormal_B_G, sum_im, imBlendNormal_B_G);
+			//read image
+			Mat waterTrainingImage = imread(waterTrainingFileName, 1);
 
-	//defining average kernel 3x3
-	Mat avg3x3_kernel = (Mat_<double>(3, 3) << 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0);
+			// convert to hsv
+			cv::cvtColor(waterTrainingImage, waterTrainingImage, cv::COLOR_BGR2HSV);
 
-	//defining matrices for storing 3x3 average of blue and green planes
-	Mat blueAverage, greenAverage;
-	// converting to double type
-	blueAverage.convertTo(blueAverage, CV_64FC1);
-	greenAverage.convertTo(greenAverage, CV_64FC1);
+			//check for data reading to be ok
+			if (!waterTrainingImage.data) {
+				std::printf("failed to fetch file %s\n", waterTrainingFileName);
+				return -1;
+			}//end of if 
+			//imshow("water only training", waterTrainingImage);
+			//waitKey(0);
 
-	// taking 3x3 average
-	filter2D(planes[0], blueAverage, planes[0].depth(), avg3x3_kernel);
-	filter2D(planes[1], greenAverage, planes[1].depth(), avg3x3_kernel);
+			Mat WaterOnlyPlanes[3];
+			split(waterTrainingImage, WaterOnlyPlanes);
+			std::printf("size of WaterOnlyPlanes[0]: %d  %d  %d\n", WaterOnlyPlanes[0].rows, WaterOnlyPlanes[0].cols, WaterOnlyPlanes[0].channels());
 
-	//imBlendAverage_B_G_R: for blending of averaged green and blue channels
-	Mat imBlendAverage_B_G_R;
-	//convert to double
-	imBlendAverage_B_G_R.convertTo(imBlendAverage_B_G_R, CV_64FC1);
+			// vector of each plane
+			Mat WaterOnlyValueVector, WaterOnlySaturationVector, WaterOnlyHueVector;
 
-	//blend averaged green and blue with a and b coeffs
-	addWeighted(greenAverage, a, blueAverage, b, 0.0, imBlendAverage_B_G_R);
+			// reshape each plane into vector separately
+			// column vector
+			WaterOnlyValueVector = WaterOnlyPlanes[2].reshape(0, 1).t();
+			WaterOnlySaturationVector = WaterOnlyPlanes[1].reshape(0, 1).t();
+			WaterOnlyHueVector = WaterOnlyPlanes[0].reshape(0, 1).t();
+			std::printf("WaterOnlyValueVector size: %d  %d  %d\n", WaterOnlyValueVector.rows, WaterOnlyValueVector.cols, WaterOnlyValueVector.channels());
 
-	//differentiate red values
-	addWeighted(imBlendAverage_B_G_R, 1.0, planes[2], -1.0, 0.0, imBlendAverage_B_G_R);
+			// (row*com)x3 vector holding all RGB pixels of water
+			// (WaterOnlyValueVector.rows, 3);
+			Mat WaterOnlyRGBVector;
 
-	//CompensationTermRed: storing finally compensated red channel intensities
-	Mat CompensationTermRed;
-	//coverting to double
-	CompensationTermRed.convertTo(CompensationTermRed, CV_64FC1);
+			// concatenation of three vectors values using hconcat
+			// hconcate: horizontal concatenation
+			hconcat(WaterOnlyValueVector, WaterOnlySaturationVector, WaterOnlyRGBVector);
+			hconcat(WaterOnlyRGBVector, WaterOnlyHueVector, WaterOnlyRGBVector);
+			std::printf("WaterOnlyRGBVector dims is: %d  %d  %d\n", WaterOnlyRGBVector.rows, WaterOnlyRGBVector.cols, WaterOnlyRGBVector.channels());
 
-	//multiplication term
-	CompensationTermRed = imBlendAverage_B_G_R.mul(imBlendNormal_B_G);
+			// label vector for water pixels, all preset one 
+			Mat WaterOnlyLabelVector_float = Mat::ones(WaterOnlyRGBVector.rows, 1, CV_32SC1);
+			std::printf("WaterOnlyLabelVector_float dims: %d\t%d\t%d\t\n", WaterOnlyLabelVector_float.rows, WaterOnlyLabelVector_float.cols, WaterOnlyLabelVector_float.channels());
+			//assign value to 
+			if (!waterTrainingRGBVector.data) {
+				//if this the first time assigning
+				// no need to vconcat
+				waterTrainingRGBVector = WaterOnlyRGBVector;
+				std::printf("dims of waterTrainingRGBVector: %d\t%d\t%d\t\n", waterTrainingRGBVector.rows, waterTrainingRGBVector.cols, waterTrainingRGBVector.channels());
+			}//end of if
+			else {
+				cv::vconcat(waterTrainingRGBVector, WaterOnlyRGBVector, waterTrainingRGBVector);
+				std::printf("dims of waterTrainingRGBVector: %d\t%d\t%d\t\n", waterTrainingRGBVector.rows, waterTrainingRGBVector.cols, waterTrainingRGBVector.channels());
+			}//end of else
 
-	//final add term
-	addWeighted(CompensationTermRed, 1.0, planes[2], 1.0, 0.0, CompensationTermRed);
+			//////////////////////////////
+			//labeling
+			// for label +1, Hue water label
+			if (i <= 6) {
+				if (!waterTrainingLabelsVector_float.data) {
+					waterTrainingLabelsVector_float = WaterOnlyLabelVector_float;
+					std::printf("waterTrainingLabelsVector_float dims: %d\t%d\t%d\t\n\n", waterTrainingLabelsVector_float.rows, waterTrainingLabelsVector_float.cols, waterTrainingLabelsVector_float.channels());
+				}
+				else {
+					cv::vconcat(waterTrainingLabelsVector_float, WaterOnlyLabelVector_float, waterTrainingLabelsVector_float);
+					std::printf("waterTrainingLabelsVector_float dims: %d\t%d\t%d\t\n\n", waterTrainingLabelsVector_float.rows, waterTrainingLabelsVector_float.cols, waterTrainingLabelsVector_float.channels());
+				} // end of else
+			} // end if i<=6
+			// label +2.0 for Saturation water
+			else if (i > 6 && i <= 11) {
+				WaterOnlyLabelVector_float += 1.0;
+				cv::vconcat(waterTrainingLabelsVector_float, WaterOnlyLabelVector_float, waterTrainingLabelsVector_float);
+				std::printf("waterTrainingLabelsVector_float dims: %d\t%d\t%d\t\n\n", waterTrainingLabelsVector_float.rows, waterTrainingLabelsVector_float.cols, waterTrainingLabelsVector_float.channels());
+			}
+			if (i == 12) {
+				WaterOnlyLabelVector_float += 2.0;
+				cv::vconcat(waterTrainingLabelsVector_float, WaterOnlyLabelVector_float, waterTrainingLabelsVector_float);
+				std::printf("waterTrainingLabelsVector_float dims: %d\t%d\t%d\t\n\n", waterTrainingLabelsVector_float.rows, waterTrainingLabelsVector_float.cols, waterTrainingLabelsVector_float.channels());
+			}//end if i==12
+			if (i == 13) {
+				WaterOnlyLabelVector_float += 3.0;
+				cv::vconcat(waterTrainingLabelsVector_float, WaterOnlyLabelVector_float, waterTrainingLabelsVector_float);
+				std::printf("waterTrainingLabelsVector_float dims: %d\t%d\t%d\t\n\n", waterTrainingLabelsVector_float.rows, waterTrainingLabelsVector_float.cols, waterTrainingLabelsVector_float.channels());
+			}//end if i==13
+			if (i == 14 || i == 15) {
+				WaterOnlyLabelVector_float += 4.0;
+				cv::vconcat(waterTrainingLabelsVector_float, WaterOnlyLabelVector_float, waterTrainingLabelsVector_float);
+				std::printf("waterTrainingLabelsVector_float dims: %d\t%d\t%d\t\n\n", waterTrainingLabelsVector_float.rows, waterTrainingLabelsVector_float.cols, waterTrainingLabelsVector_float.channels());
+			}//end if i==14 || i==15
 
-	// assign new red channel values to planes[2]
-	planes[2] = CompensationTermRed;
 
-	Mat image2;
-	cv::merge(planes, 3, image2);
-	image2.convertTo(image2, CV_8UC3);
-	/*imshow("merge", image2);
-	std::printf("\ndims of image2 (merge): %d  %d\n", image2.rows, image2.cols);*/
+		}//end of for reading water training samples
 
-	// assign output
-	RedCompensatedImage = image2;
+		// assign the output
+		waterTrainingFeatureVectorRGB_uchar = waterTrainingRGBVector;
+		waterTrainingLabelVector_float = waterTrainingLabelsVector_float;
 
-	return 0;
-
-}//end of function RedChannelCompensationEq8
-
-void imshowwindownormal(const char name4window[128], Mat& tmp4image) {
-	namedWindow(name4window, cv::WINDOW_NORMAL); 
-	imshow(name4window, tmp4image);
-}
+	}// end of function createWaterOnlyHSVFeatureVector
 
 
+	int CreateNonWaterHSVFeatureVector(Mat& NonWaterFetureVectorRGB_uchar, Mat& NonWaterLabelVector_float) {
 
-int createWaterOnlyHSVFeatureVector(Mat& waterTrainingFeatureVectorRGB_uchar, Mat& waterTrainingLabelVector_float) {
+		//read an image
+		Mat image = imread("9554.png", 1);
+		//check for existance of data
+		if (!image.data)
+		{
+			std::printf("no image data.\n"); return -1;
+		}
 
-	std::printf("\n\n function createWaterOnlyFeatureVector\n\n");
-	// char array to store filenames
-	char waterTrainingFileName[128];
-
-	// num of available pure water sample images
-	uint waterTrainingTotalSamples = 2;
-
-	// holding all rgb pixels
-	Mat waterTrainingRGBVector;
-
-	// holding all labels
-	Mat waterTrainingLabelsVector_float;
-
-	for (uint i = 1; i <= waterTrainingTotalSamples; i++) {
-
-		// show the training image number in output
-		std::printf("\nimage training #%d\n", i);
-		//creating filenames				
-		std::snprintf(waterTrainingFileName, sizeof(waterTrainingFileName), trainingsampleaddress, i);
-
-		//read image
-		Mat waterTrainingImage = imread(waterTrainingFileName, 1);
+		// defining non water coordination
+		Rect nonWaterRect(1, 400, 640, 320);
+		//non water image
+		Mat NonWaterImage = image(nonWaterRect);
+		//imshow("non water image", NonWaterImage);
 
 		// convert to hsv
-		cv::cvtColor(waterTrainingImage, waterTrainingImage, cv::COLOR_BGR2HSV);
+		cv::cvtColor(NonWaterImage, NonWaterImage, cv::COLOR_BGR2HSV);
 
-		//check for data reading to be ok
-		if (!waterTrainingImage.data) {
-			std::printf("failed to fetch file %s\n", waterTrainingFileName);
-			return -1;
-		}//end of if 
-		//imshow("water only training", waterTrainingImage);
-		//waitKey(0);
+		//holding plited nonwater image planes
+		Mat NonWaterPlanes[3];
 
-		Mat WaterOnlyPlanes[3];
-		split(waterTrainingImage, WaterOnlyPlanes);
-		std::printf("size of WaterOnlyPlanes[0]: %d  %d  %d\n", WaterOnlyPlanes[0].rows, WaterOnlyPlanes[0].cols, WaterOnlyPlanes[0].channels());
+		//split nonwater image sample
+		split(NonWaterImage, NonWaterPlanes);
+		std::printf("NonWaterPlanes[0] dims: %d\t%d\t%d \n", NonWaterPlanes[0].rows, NonWaterPlanes[0].cols, NonWaterPlanes[0].channels());
 
-		// vector of each plane
-		Mat WaterOnlyValueVector, WaterOnlySaturationVector, WaterOnlyHueVector;
+		// 3 column vector for each of rgb planes
+		Mat NonWaterValueVector, NonWaterSaturationVector, NonWaterHueVector;
 
-		// reshape each plane into vector separately
-		// column vector
-		WaterOnlyValueVector = WaterOnlyPlanes[2].reshape(0, 1).t();
-		WaterOnlySaturationVector = WaterOnlyPlanes[1].reshape(0, 1).t();
-		WaterOnlyHueVector = WaterOnlyPlanes[0].reshape(0, 1).t();
-		std::printf("WaterOnlyValueVector size: %d  %d  %d\n", WaterOnlyValueVector.rows, WaterOnlyValueVector.cols, WaterOnlyValueVector.channels());
+		// reshaping each plane to get a column vector Mx1
+		NonWaterValueVector = NonWaterPlanes[2].reshape(0, 1).t();//Value 1st
+		NonWaterSaturationVector = NonWaterPlanes[1].reshape(0, 1).t();//Saturation 2nd
+		NonWaterHueVector = NonWaterPlanes[0].reshape(0, 1).t();//Hue
+		std::printf("NonWaterSaturationVector size is: %d\t%d\t%d\t\n", NonWaterSaturationVector.rows, NonWaterSaturationVector.cols, NonWaterSaturationVector.channels());
 
-		// (row*com)x3 vector holding all RGB pixels of water
-		// (WaterOnlyValueVector.rows, 3);
-		Mat WaterOnlyRGBVector;
+		// Mx3 vector holding all RGB pixels of NonWater
+		Mat NonWaterRGBVector;
 
-		// concatenation of three vectors values using hconcat
-		// hconcate: horizontal concatenation
-		hconcat(WaterOnlyValueVector, WaterOnlySaturationVector, WaterOnlyRGBVector);
-		hconcat(WaterOnlyRGBVector, WaterOnlyHueVector, WaterOnlyRGBVector);
-		std::printf("WaterOnlyRGBVector dims is: %d  %d  %d\n", WaterOnlyRGBVector.rows, WaterOnlyRGBVector.cols, WaterOnlyRGBVector.channels());
+		// concatenate 3 column vec into one place (Mx3)
+		cv::hconcat(NonWaterValueVector, NonWaterSaturationVector, NonWaterRGBVector);
+		cv::hconcat(NonWaterRGBVector, NonWaterHueVector, NonWaterRGBVector);
+		std::printf("NonWaterRGBVector dims: %d\t%d\t%d\t\n", NonWaterRGBVector.rows, NonWaterRGBVector.cols, NonWaterRGBVector.channels());
 
-		// label vector for water pixels, all preset one 
-		Mat WaterOnlyLabelVector_float = Mat::ones(WaterOnlyRGBVector.rows, 1, CV_32SC1);
-		std::printf("WaterOnlyLabelVector_float dims: %d\t%d\t%d\t\n", WaterOnlyLabelVector_float.rows, WaterOnlyLabelVector_float.cols, WaterOnlyLabelVector_float.channels());
-		//assign value to 
-		if (!waterTrainingRGBVector.data) {
-			//if this the first time assigning
-			// no need to vconcat
-			waterTrainingRGBVector = WaterOnlyRGBVector;
-			std::printf("dims of waterTrainingRGBVector: %d\t%d\t%d\t\n", waterTrainingRGBVector.rows, waterTrainingRGBVector.cols, waterTrainingRGBVector.channels());
-		}//end of if
-		else {
-			cv::vconcat(waterTrainingRGBVector, WaterOnlyRGBVector, waterTrainingRGBVector);
-			std::printf("dims of waterTrainingRGBVector: %d\t%d\t%d\t\n", waterTrainingRGBVector.rows, waterTrainingRGBVector.cols, waterTrainingRGBVector.channels());
-		}//end of else
+		// label vector for NonWater pixels
+		NonWaterLabelVector_float = cv::Mat::zeros(NonWaterRGBVector.rows, 1, CV_32SC1);
+		std::printf("NonWaterLabelVector_float dims: %d\t%d\t%d\t\n", NonWaterLabelVector_float.rows, NonWaterLabelVector_float.cols, NonWaterLabelVector_float.channels());
+		//cout << NonWaterLabelVector_float << "\n";
+		//cout << NonWaterLabelVector_float << "\n";
 
-		//////////////////////////////
-		//labeling
-		// for label +1, Hue water label
-		if (i <= 6) {
-			if (!waterTrainingLabelsVector_float.data) {
-				waterTrainingLabelsVector_float = WaterOnlyLabelVector_float;
-				std::printf("waterTrainingLabelsVector_float dims: %d\t%d\t%d\t\n\n", waterTrainingLabelsVector_float.rows, waterTrainingLabelsVector_float.cols, waterTrainingLabelsVector_float.channels());
-			}
-			else {
-				cv::vconcat(waterTrainingLabelsVector_float, WaterOnlyLabelVector_float, waterTrainingLabelsVector_float);
-				std::printf("waterTrainingLabelsVector_float dims: %d\t%d\t%d\t\n\n", waterTrainingLabelsVector_float.rows, waterTrainingLabelsVector_float.cols, waterTrainingLabelsVector_float.channels());
-			} // end of else
-		} // end if i<=6
-		// label +2.0 for Saturation water
-		else if (i > 6 && i <= 11) {
-			WaterOnlyLabelVector_float += 1.0;
-			cv::vconcat(waterTrainingLabelsVector_float, WaterOnlyLabelVector_float, waterTrainingLabelsVector_float);
-			std::printf("waterTrainingLabelsVector_float dims: %d\t%d\t%d\t\n\n", waterTrainingLabelsVector_float.rows, waterTrainingLabelsVector_float.cols, waterTrainingLabelsVector_float.channels());
-		}
-		if (i == 12) {
-			WaterOnlyLabelVector_float += 2.0;
-			cv::vconcat(waterTrainingLabelsVector_float, WaterOnlyLabelVector_float, waterTrainingLabelsVector_float);
-			std::printf("waterTrainingLabelsVector_float dims: %d\t%d\t%d\t\n\n", waterTrainingLabelsVector_float.rows, waterTrainingLabelsVector_float.cols, waterTrainingLabelsVector_float.channels());
-		}//end if i==12
-		if (i == 13) {
-			WaterOnlyLabelVector_float += 3.0;
-			cv::vconcat(waterTrainingLabelsVector_float, WaterOnlyLabelVector_float, waterTrainingLabelsVector_float);
-			std::printf("waterTrainingLabelsVector_float dims: %d\t%d\t%d\t\n\n", waterTrainingLabelsVector_float.rows, waterTrainingLabelsVector_float.cols, waterTrainingLabelsVector_float.channels());
-		}//end if i==13
-		if (i == 14 || i == 15) {
-			WaterOnlyLabelVector_float += 4.0;
-			cv::vconcat(waterTrainingLabelsVector_float, WaterOnlyLabelVector_float, waterTrainingLabelsVector_float);
-			std::printf("waterTrainingLabelsVector_float dims: %d\t%d\t%d\t\n\n", waterTrainingLabelsVector_float.rows, waterTrainingLabelsVector_float.cols, waterTrainingLabelsVector_float.channels());
-		}//end if i==14 || i==15
+		// assign output
+		NonWaterFetureVectorRGB_uchar = NonWaterRGBVector;
+	}// end of function createWaterOnlyHSVFeatureVector
 
-
-	}//end of for reading water training samples
-
-	// assign the output
-	waterTrainingFeatureVectorRGB_uchar = waterTrainingRGBVector;
-	waterTrainingLabelVector_float = waterTrainingLabelsVector_float;
-
-}// end of function createWaterOnlyHSVFeatureVector
-
-
-int CreateNonWaterHSVFeatureVector(Mat& NonWaterFetureVectorRGB_uchar, Mat& NonWaterLabelVector_float) {
-
-	//read an image
-	Mat image = imread("9554.png", 1);
-	//check for existance of data
-	if (!image.data)
-	{
-		std::printf("no image data.\n"); return -1;
-	}
-
-	// defining non water coordination
-	Rect nonWaterRect(1, 400, 640, 320);
-	//non water image
-	Mat NonWaterImage = image(nonWaterRect);
-	//imshow("non water image", NonWaterImage);
-
-	// convert to hsv
-	cv::cvtColor(NonWaterImage, NonWaterImage, cv::COLOR_BGR2HSV);
-
-	//holding plited nonwater image planes
-	Mat NonWaterPlanes[3];
-
-	//split nonwater image sample
-	split(NonWaterImage, NonWaterPlanes);
-	std::printf("NonWaterPlanes[0] dims: %d\t%d\t%d \n", NonWaterPlanes[0].rows, NonWaterPlanes[0].cols, NonWaterPlanes[0].channels());
-
-	// 3 column vector for each of rgb planes
-	Mat NonWaterValueVector, NonWaterSaturationVector, NonWaterHueVector;
-
-	// reshaping each plane to get a column vector Mx1
-	NonWaterValueVector = NonWaterPlanes[2].reshape(0, 1).t();//Value 1st
-	NonWaterSaturationVector = NonWaterPlanes[1].reshape(0, 1).t();//Saturation 2nd
-	NonWaterHueVector = NonWaterPlanes[0].reshape(0, 1).t();//Hue
-	std::printf("NonWaterSaturationVector size is: %d\t%d\t%d\t\n", NonWaterSaturationVector.rows, NonWaterSaturationVector.cols, NonWaterSaturationVector.channels());
-
-	// Mx3 vector holding all RGB pixels of NonWater
-	Mat NonWaterRGBVector;
-
-	// concatenate 3 column vec into one place (Mx3)
-	cv::hconcat(NonWaterValueVector, NonWaterSaturationVector, NonWaterRGBVector);
-	cv::hconcat(NonWaterRGBVector, NonWaterHueVector, NonWaterRGBVector);
-	std::printf("NonWaterRGBVector dims: %d\t%d\t%d\t\n", NonWaterRGBVector.rows, NonWaterRGBVector.cols, NonWaterRGBVector.channels());
-
-	// label vector for NonWater pixels
-	NonWaterLabelVector_float = cv::Mat::zeros(NonWaterRGBVector.rows, 1, CV_32SC1);
-	std::printf("NonWaterLabelVector_float dims: %d\t%d\t%d\t\n", NonWaterLabelVector_float.rows, NonWaterLabelVector_float.cols, NonWaterLabelVector_float.channels());
-	//cout << NonWaterLabelVector_float << "\n";
-	//cout << NonWaterLabelVector_float << "\n";
-
-	// assign output
-	NonWaterFetureVectorRGB_uchar = NonWaterRGBVector;
-}// end of function createWaterOnlyHSVFeatureVector
-
-void printminMaxLoc(Mat& in) {
-	double min, max;
-	cv::minMaxLoc(in, &min, &max);
-	std::cout << "min and max:\t" << min << "\t" << max << "\n";
-}// end printminmaxloc
+	void printminMaxLoc(Mat& in) {
+		double min, max;
+		cv::minMaxLoc(in, &min, &max);
+		std::cout << "min and max:\t" << min << "\t" << max << "\n";
+	}// end printminmaxloc
 
