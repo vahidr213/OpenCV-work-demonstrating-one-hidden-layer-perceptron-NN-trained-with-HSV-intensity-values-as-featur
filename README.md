@@ -50,23 +50,23 @@ In this case, we insist on replicating the process by yourself. The execution ti
 
 
 
-#include <iostream>
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/ml/ml.hpp>
-#include "underwater.h"
-#include <fstream>
-using namespace cv;
-using namespace cv::ml;
-using namespace std;
+	#include <iostream>
+	#include <opencv2/core/core.hpp>
+	#include <opencv2/highgui/highgui.hpp>
+	#include <opencv2/imgproc/imgproc.hpp>
+	#include <opencv2/imgcodecs.hpp>
+	#include <opencv2/ml/ml.hpp>
+	#include "underwater.h"
+	#include <fstream>
+	using namespace cv;
+	using namespace cv::ml;
+	using namespace std;
 
-Mat image;
+	Mat image;
 
 
 
-void Train_Test_ANN_MLP_SIGMOID_BackProp(int nclasses, const Mat& TrainData, const Mat& TrainLabels, const Mat& TestData, Mat& TestLabels) {
+	void Train_Test_ANN_MLP_SIGMOID_BackProp(int nclasses, const Mat& TrainData, const Mat& TrainLabels, const Mat& TestData, Mat& TestLabels) {
 
     //TrainData = ntrainsamples * nFeatures - float typr
     //TrainLabels=ntrainsamples*1   - float type
@@ -135,11 +135,11 @@ void Train_Test_ANN_MLP_SIGMOID_BackProp(int nclasses, const Mat& TrainData, con
     }// end for nNeuron
     outputtxtfile.close();
 
-}//end of function Train_Test_ANN_MLP_SIGMOID_BackProp
+	}//end of function Train_Test_ANN_MLP_SIGMOID_BackProp
 
 
-int main()
-{
+	int main()
+	{
 
     //read an image
     image = imread("water (8).png", 1);
